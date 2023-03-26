@@ -3,6 +3,7 @@ const models = require('../models');
 
 // get the Cat model
 const { Cat } = models;
+const { Dog } = models;
 
 // default fake data so that we have something to work with until we make a real Cat
 const defaultData = {
@@ -241,6 +242,61 @@ const notFound = (req, res) => {
   });
 };
 
+const createDog = async (req, res) => {
+  if (!req.body.name || !req.body.breed || !req.body.age) { return res.status(400).json({ error: 'name, breed, and age are all required' }); }
+  const dogData = {
+    name: `${req.body.name}`,
+    breed: `${req.body.breed}`,
+    age: req.body.age,
+  };
+  const newDog = new Dog(dogData);
+  try {
+    await newDog.save();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'failed to create dog' });
+  }
+
+  lastAdded = newDog;
+  return res.json({
+    name: lastAdded.name,
+    breed: lastAdded.breed,
+    age: lastAdded.age,
+  });
+};
+
+const findDog = async (req, res) => {
+  if (!req.query.name) return res.status(400).json({ error: 'Name is required to perform a search' });
+
+  let doc;
+  try {
+    doc = await Dog.findOne({ name: req.query.name }).exec();
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+  if (!doc) { return res.json({ error: 'No dogs found' }); }
+
+  try {
+    await Dog.updateOne({ name: req.query.name }, { age: doc.age + 1 });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'Something went wrong' });
+  }
+  return res.json({ newAge: doc.age + 1 });
+};
+
+const page4 = async (req, res) => {
+  try {
+    const docs = await Dog.find({}).lean().exec();
+
+    return res.render('page4', { dogs: docs, title: 'Page 4' });
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({ error: 'failed to find cats' });
+  }
+};
+
 // export the relevant public controller functions
 module.exports = {
   index: hostIndex,
@@ -252,4 +308,7 @@ module.exports = {
   updateLast,
   searchName,
   notFound,
+  createDog,
+  findDog,
+  page4,
 };
